@@ -20,8 +20,10 @@ namespace StringStorageUtility
         private int _timeoutMs;
 		private JsonStringObject jso;
 		private bool Initialized = false;
+        private bool _autoSaveEnabled;
+		private bool _awaitingSave = false;
 
-		//Proprties
+        //Proprties
         public ushort Debug
 		{
 			get 
@@ -46,7 +48,25 @@ namespace StringStorageUtility
 			get { return _timeoutMs; }
 			set { _timeoutMs = value; }
 		}
-		
+
+		public ushort AutoSaveEnabled
+		{
+			get { return ((ushort)(_autoSaveEnabled ? 1 : 0)); }
+			set 
+			{ 
+				_autoSaveEnabled = value == 1; 
+				if (_autoSaveEnabled) 
+				{ 
+					AutoSaveIsEnabled?.Invoke(this, new EventArgs()); 
+				} 
+				else 
+				{ 
+					AutoSaveIsDisabled?.Invoke(this, new EventArgs()); 
+				}	
+            }
+		}
+
+
 		//Events
 		public event EventHandler<StringListUpdateEventArgs> StringListUpdated;
 		public event EventHandler<EventArgs> FileFound;
@@ -55,6 +75,10 @@ namespace StringStorageUtility
 		public event EventHandler<EventArgs> WriteStarted;
 		public event EventHandler<EventArgs> ReadComplete;
         public event EventHandler<EventArgs> WriteComplete;
+		public event EventHandler<EventArgs> AutoSaveIsEnabled;
+        public event EventHandler<EventArgs> AutoSaveIsDisabled;
+		public event EventHandler<EventArgs> AwaitingSave;
+        public event EventHandler<EventArgs> NotAwaitingSave;
 
         public StringStore() 
 		{
@@ -174,7 +198,9 @@ namespace StringStorageUtility
 					//convert jso to string and write string
 					var jsonString = JsonConvert.SerializeObject(jso);				
 					fs.Write(jsonString, Encoding.ASCII);
-				}
+                    _awaitingSave = false;
+					NotAwaitingSave?.Invoke(this, new EventArgs());
+                }
 
 				catch (Exception e)
 				{
@@ -213,15 +239,26 @@ namespace StringStorageUtility
                     if (i >= _stringsList.Count)
                     {
                         _stringsList.Add(s);
+						_awaitingSave = true;
 
                     }
                     else //otherwise overwrite the value at that index with the passed in string
                     {
                         _stringsList[i] = s;
+                        _awaitingSave = true;
+                    }
+
+					if (_awaitingSave && !_autoSaveEnabled)
+					{
+                        //raise event for simpl
+                        AwaitingSave?.Invoke(this, new EventArgs());
                     }
 
 					//restart a timer that will autosave when it expires
-                    RestartSaveTimer();
+					if (_autoSaveEnabled)
+					{
+						RestartSaveTimer();
+					}
                 }
 				
             }
