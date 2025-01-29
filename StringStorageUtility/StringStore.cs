@@ -11,19 +11,22 @@ namespace StringStorageUtility
 {
     public class StringStore
     {
-		//vars
-		private string _filePath;
+        #region Variables
+
+        private string _filePath;
         private static readonly object _fileStreamLock = new object();
         private bool _debug;
         private List<string> _stringsList;
         private CTimer _saveTimer;
         private int _timeoutMs;
-		private JsonStringObject jso;
-		private bool Initialized = false;
+        private JsonStringObject jso;
+        private bool Initialized = false;
         private bool _autoSaveEnabled;
-		private bool _awaitingSave = false;
+        private bool _awaitingSave = false;
 
-        //Proprties
+        #endregion
+
+        #region	Proprties
         public ushort Debug
 		{
 			get 
@@ -32,7 +35,7 @@ namespace StringStorageUtility
 			}
 			set 
 			{
-                CrestronConsole.PrintLine($"Setting _debug to {value}");
+                CrestronConsole.PrintLine($"Setting _debug to {value == 1}");
                 _debug = value == 1;
 			}
 		}
@@ -51,11 +54,16 @@ namespace StringStorageUtility
 
 		public ushort AutoSaveEnabled
 		{
-			get { return ((ushort)(_autoSaveEnabled ? 1 : 0)); }
+			get 
+			{ 
+				return ((ushort)(_autoSaveEnabled ? 1 : 0)); 
+			}
+
 			set 
 			{ 
 				_autoSaveEnabled = value == 1; 
-				if (_autoSaveEnabled) 
+
+                if (_autoSaveEnabled) 
 				{ 
 					AutoSaveIsEnabled?.Invoke(this, new EventArgs()); 
 				} 
@@ -66,9 +74,10 @@ namespace StringStorageUtility
             }
 		}
 
+        #endregion
 
-		//Events
-		public event EventHandler<StringListUpdateEventArgs> StringListUpdated;
+        #region Events
+        public event EventHandler<StringListUpdateEventArgs> StringListUpdated;
 		public event EventHandler<EventArgs> FileFound;
 		public event EventHandler<EventArgs> IsInitialized;
 		public event EventHandler<EventArgs> ReadStarted;
@@ -79,8 +88,11 @@ namespace StringStorageUtility
         public event EventHandler<EventArgs> AutoSaveIsDisabled;
 		public event EventHandler<EventArgs> AwaitingSave;
         public event EventHandler<EventArgs> NotAwaitingSave;
+		#endregion
 
-        public StringStore() 
+		#region Methods
+
+		public StringStore() 
 		{
 			//empty constructor
 		}
@@ -311,6 +323,6 @@ namespace StringStorageUtility
 			WriteFile();
 		}
 
-
+        #endregion
     }
 }
