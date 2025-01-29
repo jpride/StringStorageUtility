@@ -124,7 +124,7 @@ namespace StringStorageUtility
 			ReadStarted?.Invoke(this, new EventArgs());
 
 			//lock thread for file access
-			lock (_fileStreamLock)
+            lock (_fileStreamLock)
 			{
 				try
 				{
