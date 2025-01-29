@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-//using System.IO;
 using Crestron.SimplSharp.CrestronIO;
 using Crestron.SimplSharp;
 using Newtonsoft.Json;
@@ -61,7 +58,7 @@ namespace StringStorageUtility
 
         public StringStore() 
 		{
-		
+			//empty constructor
 		}
 
 		public void Initialize(string path, int  timeoutMs)
@@ -71,7 +68,8 @@ namespace StringStorageUtility
 				CrestronConsole.PrintLine($"Initialize called\n"); 
 				CrestronConsole.PrintLine($"FilePath: {path}\n");
 			}
-			_filePath = path;
+            //set file path and timeout. also instantiate some global vars
+            _filePath = path;
 			TimeoutMs = timeoutMs;
 			_stringsList = new List<string>();
 			jso = new JsonStringObject();
@@ -79,8 +77,9 @@ namespace StringStorageUtility
 			ReadFile();
 
 			Initialized = true;
-            IsInitialized?.Invoke(this, new EventArgs());
 
+            //raise event for simpl
+            IsInitialized?.Invoke(this, new EventArgs());
         }
 
 		public void ReadFile()
