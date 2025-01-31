@@ -6,7 +6,6 @@ using Crestron.SimplSharp;
 using Newtonsoft.Json;
 
 
-
 namespace StringStorageUtility
 {
     public class StringStore
@@ -96,7 +95,7 @@ namespace StringStorageUtility
 		{
 			//empty constructor
 		}
-
+		
 		public void Initialize(string path, int  timeoutMs)
 		{
 			if (_debug) 
@@ -254,13 +253,13 @@ namespace StringStorageUtility
 					//if the index passed is higher than the list contains, add to end of list
                     if (i >= _stringsList.Count)
                     {
-                        _stringsList.Add(s);
+                        _stringsList.Add(s.Trim());
 						_awaitingSave = true;
 
                     }
                     else //otherwise overwrite the value at that index with the passed in string
                     {
-                        _stringsList[i] = s;
+                        _stringsList[i] = s.Trim();
                         _awaitingSave = true;
                     }
 
@@ -327,6 +326,7 @@ namespace StringStorageUtility
 			WriteFile();
 		}
 
-        #endregion
+		#endregion
+	
     }
 }

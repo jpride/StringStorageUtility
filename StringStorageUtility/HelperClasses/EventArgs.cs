@@ -8,5 +8,9 @@ namespace StringStorageUtility
         public ushort StringCount {  get; set; }
         public ushort StringIndex { get; set; }
         public string StringValue { get; set; }
+
+
+
+        
     }
 }
