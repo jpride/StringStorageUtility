@@ -120,8 +120,12 @@ namespace StringStorageUtility
 
 		public void ReadFile()
 		{
-			//raise event for simpl
-			ReadStarted?.Invoke(this, new EventArgs());
+            //if we are awaiting a save, we are not awaiting a save anymore. Effectively, this will overwrite pending changes to the file
+            _awaitingSave = false;
+            NotAwaitingSave?.Invoke(this, new EventArgs());
+
+            //raise event for simpl
+            ReadStarted?.Invoke(this, new EventArgs());
 
 			//lock thread for file access
             lock (_fileStreamLock)
@@ -298,7 +302,7 @@ namespace StringStorageUtility
                     CrestronConsole.PrintLine($"String[{i}]: {item}\n");
                 }
 				args.StringIndex = (ushort)(i);
-				args.StringValue = item.ToString();
+				args.StringValue = item;
                 StringListUpdated?.Invoke(this, args); //raise event for simpl to ingest eventargs
 				i++;
             }
