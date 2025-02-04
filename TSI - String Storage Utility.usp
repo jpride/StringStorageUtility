@@ -1,0 +1,281 @@
+/*******************************************************************************************
+  Compiler Directives
+  (Uncomment and declare compiler directives as needed)
+*******************************************************************************************/
+// #ENABLE_DYNAMIC
+#SYMBOL_NAME "TSI - String Storage Utility"
+#CATEGORY "46" "#TSI Modules"
+#DEFAULT_VOLATILE
+#ENABLE_STACK_CHECKING
+#ENABLE_TRACE
+#OUTPUT_SHIFT		2         
+#DEFINE_CONSTANT	MAX_STRINGS	100
+         
+#DEFINE_CONSTANT	SAVETIMEOUT_MS	8000      
+
+#HELP_BEGIN
+FilePath must not contain "\". Use "/" to note path
+
+#HELP_END
+
+/*******************************************************************************************
+  Include Libraries
+*******************************************************************************************/
+#INCLUDEPATH "C:\Users\jpride\source\repos\StringStorageUtility\StringStorageUtility\bin\Debug"
+#USER_SIMPLSHARP_LIBRARY "StringStorageUtility"
+               
+
+/*******************************************************************************************
+  DIGITAL, ANALOG and SERIAL INPUTS and OUTPUTS
+*******************************************************************************************/
+DIGITAL_INPUT 	_skip_,
+				_skip_,
+				Debug,
+				_skip_,
+				Initialize,
+				_skip_,
+				EnableAutoSave,
+				Read,
+				Write,
+				_skip_;
+                 
+
+STRING_INPUT	_skip_,
+				_skip_,
+				StringIn$[MAX_STRINGS][1024]; 
+
+Digital_Output	DebuggingEnabled,
+				FileFound,
+				IsInitialized,
+				AutoSaveEnabledFb,
+				Reading,
+				Writing,
+				_skip_,
+				AwaitingSave,
+				_skip_,
+				_skip_;
+				
+
+STRING_OUTPUT	StringOut$[MAX_STRINGS]; 
+           
+
+
+/*******************************************************************************************
+  Parameters
+*******************************************************************************************/
+INTEGER_PARAMETER	TimeoutMs;
+STRING_PARAMETER	FilePath[128];
+
+/*******************************************************************************************
+  Parameter Properties
+*******************************************************************************************/
+
+#BEGIN_PARAMETER_PROPERTIES TimeoutMs
+   propValidUnits = unitDecimal;
+   propDefaultUnit = unitDecimal;
+   propDefaultValue = 8000d;
+   propShortDescription = "time in ms to wait before writing user input to file";
+#END_PARAMETER_PROPERTIES
+        
+
+#BEGIN_PARAMETER_PROPERTIES FilePath
+   propValidUnits = unitString;
+   propDefaultUnit = unitString;
+   propDefaultValue = "/user/strings.json";
+   propShortDescription = "filepath and name of file. DO NOT USE '\'. Example /user/strings/mystrings.json";
+#END_PARAMETER_PROPERTIES
+
+/*******************************************************************************************
+  Global Variables
+*******************************************************************************************/
+integer	ActiveStringCount;   
+StringStore	stringStoreObj;
+
+
+/*******************************************************************************************
+  Functions
+*******************************************************************************************/
+
+Function RegisterEvents()
+{
+	RegisterEvent(stringStoreObj, StringListUpdated, OnStringListUpdated);		
+	RegisterEvent(stringStoreObj, IsInitialized, OnInitialized);	
+	RegisterEvent(stringStoreObj, ReadStarted, OnReadStarted);
+	RegisterEvent(stringStoreObj, ReadComplete, OnReadComplete);
+	RegisterEvent(stringStoreObj, WriteStarted, OnWriteStarted);
+	RegisterEvent(stringStoreObj, WriteComplete, OnWriteComplete);
+	RegisterEvent(stringStoreObj, FileFound, OnFileFound);
+	RegisterEvent(stringStoreObj, AutoSaveIsEnabled, OnAutoSaveIsEnabled);
+	RegisterEvent(stringStoreObj, AutoSaveIsDisabled, OnAutoSaveIsDisabled);
+	RegisterEvent(stringStoreObj, AwaitingSave, OnAwaitingSave);
+	RegisterEvent(stringStoreObj, NotAwaitingSave, OnNotAwaitingSave);		
+}
+                       
+
+
+function SetAllDefinedStrings()
+{
+    integer i;
+
+	for (i = 1 to ActiveStringCount)
+	{
+    	stringStoreObj.SetStringFromSimpl(i-1,StringIn$[i]);
+	}
+}
+         
+
+function CountActiveStringSignals()
+{
+	integer i;
+
+	for (i = MAX_STRINGS to 1 Step -1)
+	{
+    	if (isSignalDefined(StringIn$[i]))
+		{
+         	ActiveStringCount = i;
+			if (Debug) { print("Active String Count: %d", ActiveStringCount); }
+			break;
+		}
+	}
+}
+
+/*******************************************************************************************
+  Event Handlers
+*******************************************************************************************/
+Change Debug
+{
+	stringStoreObj.Debug = Debug;
+	DebuggingEnabled = Debug;
+}
+
+Push Initialize
+{
+	stringStoreObj.Initialize(FilePath, TimeoutMs);
+}  
+         
+
+Push Read
+{
+	stringStoreObj.ReadFile();
+}
+      
+
+Push Write
+{
+	SetAllDefinedStrings();
+	stringStoreObj.WriteFile();
+}
+
+change EnableAutoSave
+{
+	stringStoreObj.AutoSaveEnabled = EnableAutoSave;
+}
+        
+
+Threadsafe Change StringIn$
+{
+	integer el;
+
+	el = getlastmodifiedarrayindex();
+
+	//this write te a temp list in the class and outputs changes on the stringoutputs. But if a Read happens before these changes are written to file, it reverts back to the file contents
+	stringStoreObj.SetStringFromSimpl(el-1, StringIn$[el]);
+	StringOut$[el] = StringIn$[el];
+
+}
+
+
+
+eventHandler OnStringListUpdated(StringStore sender, StringListUpdateEventArgs e )
+{
+	if (Debug)
+	{
+		print("String Update Event!\n");
+		//print("String Count: %d\n", e.StringCount);
+		print("Index: %d\n", e.StringIndex);
+		print("String: %s\n", e.StringValue);
+	}
+
+	StringOut$[e.StringIndex] = e.StringValue;
+}
+
+eventhandler OnInitialized(StringStore sender, EventArgs e)
+{
+	IsInitialized = 1;
+}
+          
+
+eventhandler OnReadStarted(StringStore sender, EventArgs e)
+{
+	Reading = 1;
+}
+
+
+eventhandler OnReadComplete(StringStore sender, EventArgs e)
+{
+	Reading = 0;
+}
+
+
+eventhandler OnWriteStarted(StringStore sender, EventArgs e)
+{
+	Writing = 1;
+}
+
+
+eventhandler OnWriteComplete(StringStore sender, EventArgs e)
+{
+	Writing = 0;
+}
+
+eventhandler OnFileFound(StringStore sender, EventArgs e)
+{
+	FileFound = 1;
+}
+
+eventhandler OnAutoSaveIsEnabled(StringStore sender, EventArgs e)
+{
+	AutoSaveEnabledFb = 1;
+}
+
+
+eventhandler OnAutoSaveIsDisabled(StringStore sender, EventArgs e)
+{
+	AutoSaveEnabledFb = 0;
+}
+
+eventhandler OnAwaitingSave(StringStore sender, EventArgs e)
+{
+	AwaitingSave = 1;
+}
+
+eventhandler OnNotAwaitingSave(StringStore sender, EventArgs e)
+{
+	AwaitingSave = 0;
+}
+
+
+
+
+
+/*******************************************************************************************
+  Main()
+*******************************************************************************************/
+
+Function Main()
+{
+	integer i;
+    
+	IsInitialized = 0;
+	RegisterEvents();		
+
+    WaitForInitializationComplete();
+	CountActiveStringSignals();  
+
+	if (FilePath != "")
+	{          
+		stringStoreObj.Initialize(FilePath, TimeoutMs);	
+	}
+}
+
+
