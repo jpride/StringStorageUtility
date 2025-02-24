@@ -180,55 +180,70 @@ namespace StringStorageUtility
 
 		public void WriteFile()
 		{
-			//create filestream
-            FileStream fs = new FileStream(_filePath, FileMode.Create);
-
-			//kill the autosave timer
-            if (_saveTimer != null)
-            {
-                _saveTimer.Stop();
-                _saveTimer.Dispose();
-            }
-
-			//invoke writeStarted event
-            WriteStarted?.Invoke(this, new EventArgs());
-
-			//lockout other threads from accessing file
-            lock (_fileStreamLock)
-            {
-
-                try
+			try
+			{
+                //lockout other threads from accessing file
+                lock (_fileStreamLock)
                 {
-					//instantiate jso with current info
-                    jso = new JsonStringObject
+                    //create filestream
+                    FileStream fs = new FileStream(_filePath, FileMode.Create);
+
+					//kill the autosave timer
+					if (_saveTimer != null)
 					{
-						LastUpdated = DateTime.Now.ToString(),
-						StringCount = _stringsList.Count,
-						Strings = _stringsList
-					};
+						try
+						{
+							_saveTimer.Stop();
+						}
+						catch (Exception e)
+						{
+							CrestronConsole.PrintLine($"Error in WriteFile - _saveTimer {e.Message}");
+						}
 
-					//call method to send to simpl
-					TransportStringsToSimpl(jso.Strings);
+					}
 
-					//convert jso to string and write string
-					var jsonString = JsonConvert.SerializeObject(jso);				
-					fs.Write(jsonString, Encoding.ASCII);
-                    _awaitingSave = false;
-					NotAwaitingSave?.Invoke(this, new EventArgs());
+					//invoke writeStarted event
+					WriteStarted?.Invoke(this, new EventArgs());
+
+
+
+                    try
+                    {
+                        //instantiate jso with current info
+                        jso = new JsonStringObject
+                        {
+                            LastUpdated = DateTime.Now.ToString(),
+                            StringCount = _stringsList.Count,
+                            Strings = _stringsList
+                        };
+
+                        //call method to send to simpl
+                        TransportStringsToSimpl(jso.Strings);
+
+                        //convert jso to string and write string
+                        var jsonString = JsonConvert.SerializeObject(jso);
+                        fs.Write(jsonString, Encoding.ASCII);
+                        _awaitingSave = false;
+                        NotAwaitingSave?.Invoke(this, new EventArgs());
+                    }
+
+                    catch (Exception e)
+                    {
+                        CrestronConsole.PrintLine($"StringStore: Error in WriteFile(): {e}\n");
+                        ErrorLog.Error($"StringStore: Error in WriteFile(): {e}\n");
+                    }
+
+                    finally
+                    {
+                        //close stream and raise event for simpl
+                        fs.Close();
+                        WriteComplete?.Invoke(this, new EventArgs());
+                    }
                 }
-
-				catch (Exception e)
-				{
-                    CrestronConsole.PrintLine($"StringStore: Error in WriteFile(): {e}\n");
-                    ErrorLog.Error($"StringStore: Error in WriteFile(): {e}\n");
-				}
-
-				finally 
-				{ 
-					//close stream and raise event for simpl
-					fs.Close(); 
-					WriteComplete?.Invoke(this, new EventArgs());
-				}
+            }
+			catch (Exception e)
+			{
+				CrestronConsole.PrintLine($"Error in Writefile Main: {e.Message}");
 			}
         }
 
