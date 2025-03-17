@@ -119,62 +119,93 @@ namespace StringStorageUtility
 
 		public void ReadFile()
 		{
-            //if we are awaiting a save, we are not awaiting a save anymore. Effectively, this will overwrite pending changes to the file
-            _awaitingSave = false;
-            NotAwaitingSave?.Invoke(this, new EventArgs());
-
-            //raise event for simpl
-            ReadStarted?.Invoke(this, new EventArgs());
-
-			//lock thread for file access
-            lock (_fileStreamLock)
+			try
 			{
-				try
-				{
-					//check if file exists
-					if (File.Exists(_filePath))
-					{
-						if (_debug) { CrestronConsole.PrintLine($"File Found. Reading Contents."); }
 
-						//raise event for simpl
-						FileFound?.Invoke(this, new EventArgs());
+                //if we are awaiting a save, we are not awaiting a save anymore. Effectively, this will overwrite pending changes to the file
+                _awaitingSave = false;
+                NotAwaitingSave?.Invoke(this, new EventArgs());
 
-						//read file into string, convert string to jso object, instantiate global list of strings
-						var jsonString = File.ReadToEnd(_filePath, Encoding.ASCII);
-						jso = JsonConvert.DeserializeObject<JsonStringObject>(jsonString);
-						_stringsList = new List<string>();
+                //raise event for simpl
+                ReadStarted?.Invoke(this, new EventArgs());
 
-						//loop thru strings in jso.Strings
-						foreach (var item in jso.Strings)
-						{
-							//add each string to global stringList var
-							_stringsList.Add(item.ToString());
-						}
+                //lock thread for file access
+                lock (_fileStreamLock)
+                {
+                    try
+                    {
+                        //check if file exists
+                        if (File.Exists(_filePath))
+                        {
+                            if (_debug) { CrestronConsole.PrintLine($"File Found. Reading Contents.\n"); }
 
+                            //raise event for simpl
+                            FileFound?.Invoke(this, new EventArgs());
+
+                            try
+                            {
+                                //read file into string, convert string to jso object, instantiate global list of strings
+                                var jsonString = File.ReadToEnd(_filePath, Encoding.ASCII);
+                                if (jsonString != null)
+                                {
+                                    jso = JsonConvert.DeserializeObject<JsonStringObject>(jsonString);
+                                    _stringsList = new List<string>();
+
+                                    //loop thru strings in jso.Strings
+                                    foreach (var item in jso.Strings)
+                                    {
+                                        //add each string to global stringList var
+                                        _stringsList.Add(item.ToString());
+                                    }
+                                }
+                                else
+                                {
+                                    CrestronConsole.PrintLine($"File Contents empty\n");
+                                }
+                            }
+                            catch (NullReferenceException e)
+                            {
+                                CrestronConsole.PrintLine($"Error reading string: {e.Message}\n");
+                            }
+                            catch (JsonReaderException e)
+                            {
+                                CrestronConsole.PrintLine($"Error reading string: {e.Message}\n");
+                            }
+                            catch (JsonSerializationException e)
+                            {
+                                CrestronConsole.PrintLine($"Error deserializing string: {e.Message}\n");
+                            }
+
+
+                        }
+                        else //write an empty file
+                        {
+                            if (_debug) { CrestronConsole.PrintLine($"File not Found. Writing an empty file.\n"); }
+
+                            //instantiate stringList and add a single empty string
+                            _stringsList = new List<string>();
+                            _stringsList.Add(String.Empty);
+
+                            //write blank file
+                            WriteFile();
+                        }
+
+                        //send strings to simpl
+                        TransportStringsToSimpl(_stringsList);
+
+                        //raise event for simpl
+                        ReadComplete?.Invoke(this, new EventArgs());
                     }
-					else //write an empty file
-					{
-						if (_debug) { CrestronConsole.PrintLine($"File not Found. Writing an empty file."); }
-
-						//instantiate stringList and add a single empty string
-						_stringsList = new List<string>();
-						_stringsList.Add(String.Empty);
-
-						//write blank file
-						WriteFile();
-					}
-
-					//send strings to simpl
-					TransportStringsToSimpl(_stringsList);
-
-					//raise event for simpl
-					ReadComplete?.Invoke(this, new EventArgs());
-				}
-				catch (Exception e)
-				{
-                    CrestronConsole.PrintLine($"StringStore: Error in ReadFile(): {e}\n");
-                    ErrorLog.Error($"StringStore: Error in ReadFile(): {e}\n");
-				}
+                    catch (Exception e)
+                    {
+                        CrestronConsole.PrintLine($"StringStore: Error in ReadFile(): {e}\n");
+                        ErrorLog.Error($"StringStore: Error in ReadFile(): {e}\n");
+                    }
+                }
+            }
+			catch (Exception e)
+			{
+                CrestronConsole.PrintLine($"Errror in ReadFile - Main: {e.Message}\n{e.StackTrace}");
 			}
         }
 
@@ -274,8 +305,11 @@ namespace StringStorageUtility
                     }
                     else //otherwise overwrite the value at that index with the passed in string
                     {
-                        _stringsList[i] = s.Trim();
-                        _awaitingSave = true;
+                        if (_stringsList[i] != s.Trim())
+                        {
+                            _stringsList[i] = s.Trim();
+                            _awaitingSave = true;
+                        }
                     }
 
 					if (_awaitingSave && !_autoSaveEnabled)
