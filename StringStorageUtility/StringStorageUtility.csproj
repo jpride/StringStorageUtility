@@ -33,12 +33,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="SimplSharpAutoUpdateInterface, Version=1.0.0.0, Culture=neutral, PublicKeyToken=1099c178b3b54c3b, processorArchitecture=MSIL">
-      <HintPath>..\packages\Crestron.SimplSharp.SDK.Library.2.21.90\lib\net47\SimplSharpAutoUpdateInterface.dll</HintPath>
-    </Reference>
-    <Reference Include="SimplSharpCloudClientInterface, Version=1.0.0.0, Culture=neutral, PublicKeyToken=1099c178b3b54c3b, processorArchitecture=MSIL">
-      <HintPath>..\packages\Crestron.SimplSharp.SDK.Library.2.21.90\lib\net47\SimplSharpCloudClientInterface.dll</HintPath>
-    </Reference>
     <Reference Include="SimplSharpCryptographyInterface, Version=1.0.6197.21123, Culture=neutral, PublicKeyToken=1099c178b3b54c3b, processorArchitecture=MSIL">
       <HintPath>..\packages\Crestron.SimplSharp.SDK.Library.2.21.90\lib\net47\SimplSharpCryptographyInterface.dll</HintPath>
     </Reference>

@@ -230,13 +230,10 @@ namespace StringStorageUtility
 						{
 							CrestronConsole.PrintLine($"Error in WriteFile - _saveTimer {e.Message}");
 						}
-
 					}
 
 					//invoke writeStarted event
 					WriteStarted?.Invoke(this, new EventArgs());
-
-
 
                     try
                     {
