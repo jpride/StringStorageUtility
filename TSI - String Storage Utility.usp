@@ -11,7 +11,7 @@
 #OUTPUT_SHIFT		2         
 #DEFINE_CONSTANT	MAX_STRINGS	100
          
-#DEFINE_CONSTANT	SAVETIMEOUT_MS	8000      
+    
 
 #HELP_BEGIN
 FilePath must not contain "\". Use "/" to note path
@@ -21,7 +21,7 @@ FilePath must not contain "\". Use "/" to note path
 /*******************************************************************************************
   Include Libraries
 *******************************************************************************************/
-#INCLUDEPATH "C:\Users\jpride\source\repos\StringStorageUtility\StringStorageUtility\bin\Debug"
+#INCLUDEPATH "C:\Users\jpride\TSI Global\ENG - CodeRepo\#Programming Testing Grounds\TSI Test Code\String Storage Utility"
 #USER_SIMPLSHARP_LIBRARY "StringStorageUtility"
                
 
@@ -50,11 +50,10 @@ Digital_Output	DebuggingEnabled,
 				AutoSaveEnabledFb,
 				Reading,
 				Writing,
+				Update_Complete,
 				_skip_,
 				AwaitingSave,
-				_skip_,
-				_skip_;
-				
+				_skip_;				
 
 STRING_OUTPUT	StringOut$[MAX_STRINGS]; 
            
@@ -63,18 +62,18 @@ STRING_OUTPUT	StringOut$[MAX_STRINGS];
 /*******************************************************************************************
   Parameters
 *******************************************************************************************/
-INTEGER_PARAMETER	TimeoutMs;
+INTEGER_PARAMETER	Timeout_Sec;
 STRING_PARAMETER	FilePath[128];
 
 /*******************************************************************************************
   Parameter Properties
 *******************************************************************************************/
 
-#BEGIN_PARAMETER_PROPERTIES TimeoutMs
+#BEGIN_PARAMETER_PROPERTIES Timeout_Sec
    propValidUnits = unitDecimal;
    propDefaultUnit = unitDecimal;
-   propDefaultValue = 8000d;
-   propShortDescription = "time in ms to wait before writing user input to file";
+   propDefaultValue = 8d;
+   propShortDescription = "time in seconds to wait before writing user input to file";
 #END_PARAMETER_PROPERTIES
         
 
@@ -88,7 +87,8 @@ STRING_PARAMETER	FilePath[128];
 /*******************************************************************************************
   Global Variables
 *******************************************************************************************/
-integer	ActiveStringCount;   
+integer	ActiveStringCount;
+string  tempString[MAX_STRINGS][1024]; //last value sent to each StringOut$, used to ignore echoes when in/out share a signal name
 StringStore	stringStoreObj;
 
 
@@ -138,6 +138,16 @@ function CountActiveStringSignals()
 		}
 	}
 }
+         
+
+long_integer_function CalculateMs(integer t)
+{
+	long_integer ms;
+
+	//integer is 16 bit, so widen before multiplying or anything over 65 seconds wraps
+	ms = t;
+	return(ms * 1000);
+}
 
 /*******************************************************************************************
   Event Handlers
@@ -150,17 +160,18 @@ Change Debug
 
 Push Initialize
 {
-	stringStoreObj.Initialize(FilePath, TimeoutMs);
+	IsInitialized = 0;
+	stringStoreObj.Initialize(FilePath, CalculateMs(Timeout_Sec));
 }  
          
 
-Push Read
+Threadsafe Push Read
 {
 	stringStoreObj.ReadFile();
 }
       
 
-Push Write
+Threadsafe Push Write
 {
 	SetAllDefinedStrings();
 	stringStoreObj.WriteFile();
@@ -178,10 +189,14 @@ Threadsafe Change StringIn$
 
 	el = getlastmodifiedarrayindex();
 
-	//this write te a temp list in the class and outputs changes on the stringoutputs. But if a Read happens before these changes are written to file, it reverts back to the file contents
-	stringStoreObj.SetStringFromSimpl(el-1, StringIn$[el]);
-	StringOut$[el] = StringIn$[el];
-
+	//only act when the input differs from what is already on the output, so StringIn$ and StringOut$ can share a signal name without looping.
+	//The edit is held in the class (not the file) until a Write/autosave; a Read reverts to the file contents.
+	if (StringIn$[el] != tempString[el])
+	{
+		tempString[el] = StringIn$[el];
+		stringStoreObj.SetStringFromSimpl(el-1, StringIn$[el]);
+		StringOut$[el] = StringIn$[el];
+	}
 }
 
 
@@ -190,13 +205,15 @@ eventHandler OnStringListUpdated(StringStore sender, StringListUpdateEventArgs e
 {
 	if (Debug)
 	{
-		print("String Update Event!\n");
-		//print("String Count: %d\n", e.StringCount);
 		print("Index: %d\n", e.StringIndex);
 		print("String: %s\n", e.StringValue);
 	}
 
-	StringOut$[e.StringIndex] = e.StringValue;
+	if (e.StringIndex >= 1 && e.StringIndex <= MAX_STRINGS)
+	{
+		tempString[e.StringIndex] = e.StringValue;
+		StringOut$[e.StringIndex] = e.StringValue;
+	}
 }
 
 eventhandler OnInitialized(StringStore sender, EventArgs e)
@@ -208,12 +225,14 @@ eventhandler OnInitialized(StringStore sender, EventArgs e)
 eventhandler OnReadStarted(StringStore sender, EventArgs e)
 {
 	Reading = 1;
+	FileFound = 0; //re-raised by FileFound event if the file is there
 }
 
 
 eventhandler OnReadComplete(StringStore sender, EventArgs e)
 {
 	Reading = 0;
+	Pulse(100,Update_Complete);
 }
 
 
@@ -226,6 +245,8 @@ eventhandler OnWriteStarted(StringStore sender, EventArgs e)
 eventhandler OnWriteComplete(StringStore sender, EventArgs e)
 {
 	Writing = 0;
+	Pulse(100,Update_Complete);
+
 }
 
 eventhandler OnFileFound(StringStore sender, EventArgs e)
@@ -274,7 +295,8 @@ Function Main()
 
 	if (FilePath != "")
 	{          
-		stringStoreObj.Initialize(FilePath, TimeoutMs);	
+		stringStoreObj.Initialize(FilePath, CalculateMs(Timeout_Sec));
+	
 	}
 }
 

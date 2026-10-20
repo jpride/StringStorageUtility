@@ -11,7 +11,7 @@
 [END]
 [BEGIN]
   ObjTp=Hd
-  IncludePath1=C:\Users\jpride\source\repos\StringStorageUtility\StringStorageUtility\bin\Debug
+  IncludePath1=C:\Users\jpride\TSI Global\ENG - CodeRepo\#Programming Testing Grounds\TSI Test Code\String Storage Utility
   Cmn1=FilePath must not contain "\". Use "/" to note path\\
 [END]
 [BEGIN]
@@ -56,11 +56,11 @@
   OutputSigType5=Digital
   OutputCue6=Writing
   OutputSigType6=Digital
-  OutputCue7=[~UNUSED~]
+  OutputCue7=Update_Complete
   OutputSigType7=Digital
-  OutputCue8=AwaitingSave
+  OutputCue8=[~UNUSED~]
   OutputSigType8=Digital
-  OutputCue9=[~UNUSED~]
+  OutputCue9=AwaitingSave
   OutputSigType9=Digital
   OutputCue10=[~UNUSED~]
   OutputSigType10=Digital
@@ -73,7 +73,7 @@
   OutputList2Cue1=StringOut$[#]
   OutputList2SigType1=Serial
   ParamCue1=[Reference Name]
-  ParamCue2=TimeoutMs
+  ParamCue2=Timeout_Sec
   ParamSigType2=Constant
   ParamCue3=FilePath
   ParamSigType3=String
@@ -128,9 +128,9 @@
   ObjTp=Dp
   H=2
   Tp=1
-  SD=time in ms to wait before writing user input to file
+  SD=time in seconds to wait before writing user input to file
   HD=True
-  DV=8000d
+  DV=8d
   Sgn=0
   Lng=False
   NF=1
